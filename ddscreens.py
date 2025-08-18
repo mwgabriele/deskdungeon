@@ -6,7 +6,9 @@ from textual.widgets import (
 from textual.screen import Screen
 from textual.containers import VerticalGroup
 from textual.binding import Binding
-from ddmodel import *
+from textual.message import Message
+import ddmodel as model
+model.CENA_ATUAL
 
 class TelaInicial(Screen):
 
@@ -38,8 +40,8 @@ class TelaInicial(Screen):
         yield Footer()
     
     def on_screen_resume(self):
-        if not JOGADOR.nome == "sem nome":
-            self.sub_title = f"({JOGADOR.nome})"
+        if not model.JOGADOR.nome == "sem nome":
+            self.sub_title = f"({model.JOGADOR.nome})"
 
 class TelaNovoJogador(Screen):
 
@@ -52,6 +54,7 @@ class TelaNovoJogador(Screen):
 '''
     BINDINGS = [
         Binding("ctrl+s", "salvar", "Salvar"),
+        Binding("ctrl+n", "novo_item", "Novo Item")
     ]
 
     def compose(self):
@@ -63,13 +66,133 @@ class TelaNovoJogador(Screen):
         yield Select([
             ("Mago", "mago"),
             ("Cavaleiro", "cavaleiro"),
-            ("Assassina", "assassina")], id="sl_classe")
+            ("Assassina", "assassina")], id="sl_classe")        
+        yield Static(f"Item equipado: {model.JOGADOR.item_equipado.get_nome()}",id="stt_item_equipado")        
         yield Footer()
+
+    def action_novo_item(self):
+        # Atualiza Model
+        model.JOGADOR.item_equipado = Item()
+        # Atualiza View
+        stt_item = self.query_one("#stt_item_equipado",Static)
+        stt_item.update(f"Item equipado: {model.JOGADOR.item_equipado.get_nome()}")
+
 
     def action_salvar(self):
         nome = self.query_one("#tx_nome",Input).value
         classe = self.query_one("#sl_classe", Select).value
         # Atualizamos a model
-        JOGADOR.nome = nome
-        JOGADOR.classe = classe
+        model.JOGADOR.nome = nome
+        model.JOGADOR.classe = classe        
         self.notify("Jogador salvo")
+
+class WidgetItens(Static):
+
+    class Pegou(Message):
+        def __init__(self):
+            s
+
+
+    def on_mount(self):
+        yield Static(self.get_conteudo())
+
+    def get_conteudo(self):
+        conteudo = str()
+        for item in model.CENA_ATUAL.itens.keys():
+            conteudo+= f"[@click=pegar]('{item}')]Pegar[/]: {item} \n"
+
+        return conteudo
+    
+    def action_pegar(self, item):
+        # acesso a model, causando uma mudança
+        model.pegar_item(item)
+        # eu já me atualizo, mostrando as modificações da minha model
+        self.update(self.get_conteudo())
+
+        self.post_message(self.Pegou())
+"""
+[@click=pegar('nome 1')]Pegar[/]: nome 1\n
+[@click=pegar('nome 2')]Pegar[/]: nome 2\n
+"""
+    
+class WidgetInventario(Static):
+    def on_mount(self):
+        yield Static(self.get_conteudo())
+
+    def get_conteudo(self):
+        conteudo = str()
+        for item in model.JOGADOR.inventario.keys():
+            conteudo += f"{item}\n"
+
+            return conteudo
+        
+    
+
+class TelaJogo(Screen):
+
+    CSS = """"""
+    SUB_TITLE = ""
+
+    BINDINGS = [
+        Binding("up","norte", "Norte"),
+        Binding("down","sul", "Sul"),
+        Binding("right","leste", "Leste"),
+        Binding("left","oeste", "Oeste"),        
+    ]
+
+    def compose(self):
+        yield Header()
+        yield Static(f'Jogador: {model.JOGADOR.nome}', id="stt_nome_jogador")
+        yield WidgetItens()
+        yield Static(f'Cena: {model.CENA_ATUAL.nome}', id="stt_nome_cena_atual")
+        yield WidgetInventario()
+        yield Footer()
+
+    def atualizar_jogador(self):
+        stt_nome_jogador = self .query_one("#stt_nome_jogador",Static)
+        stt_nome_jogador.update(f'Cena: {model.JOGADOR.nome}')
+
+        widget_inventario = self.query_one('WidgetInventario', WidgetInventario)
+        widget_inventario.
+    
+    def atualizar_cena(self):
+        stt_nome_cena_atual = self.query_one("#stt_nome_cena_atual",Static)
+        stt_nome_cena_atual.update(f'Cena: {model.CENA_ATUAL.nome}')
+
+        widget_itens = self.query_one('WidgetItens', WidgetItens)
+        widget_itens.
+
+    def on_widget_itens_pegou(self, evento:WidgetItens.Pegou):
+        self.atualizar_jogador()
+
+    def on_screen_resume(self):
+        self.atualizar_cena()
+        self.atualizar_jogador()
+
+    def action_norte(self):
+        if model.CENA_ATUAL.norte:
+            model.CENA_ATUAL = model.CENA_ATUAL.norte
+            self.atualizar_cena()
+
+    def action_sul(self):
+        if model.CENA_ATUAL.sul:
+            model.CENA_ATUAL = model.CENA_ATUAL.sul
+            self.atualizar_cena()
+
+    def action_leste(self):
+        if model.CENA_ATUAL.leste:
+            model.CENA_ATUAL = model.CENA_ATUAL.leste
+            self.atualizar_cena()
+
+    def action_oeste(self):
+        if model.CENA_ATUAL.oeste:
+            model.CENA_ATUAL = model.CENA_ATUAL.oeste
+            self.atualizar_cena()
+
+
+    def on_screen_resume(self):
+        stt_nome_jogador = self.query_one("#stt_nome_jogador",Static)
+        stt_nome_cena_atual = self.query_one("#stt_nome_cena_atual",Static)
+        
+        stt_nome_jogador.update(f'Jogador: {model.JOGADOR.nome}')
+        stt_nome_cena_atual.update(f'Cena: {model.CENA_ATUAL.nome}')
